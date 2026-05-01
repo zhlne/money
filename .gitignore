@@ -1,0 +1,12 @@
+# 隱藏密碼與設定檔
+.streamlit/secrets.toml
+.env
+
+# 忽略 Python 暫存檔
+__pycache__/
+*.pyc
+
+# 忽略虛擬環境資料夾
+venv/
+env/
+.venv/
