@@ -51,22 +51,23 @@ def get_all_taiwan_stocks_info():
 def get_institutional_chips():
     chip_data = {}
     try:
-        # 抓取上市外資與投信買賣超 (免費 Open API)
-        res = requests.get("https://openapi.twse.com.tw/v1/fund/T86_ALL", timeout=5)
-            
+        res = requests.get("https://openapi.twse.com.tw/v1/fund/T86_ALL", timeout=10)
         if res.status_code == 200:
             for item in res.json():
                 code = item.get('Code', '')
                 if len(code) == 4:
-                    # 將字串轉為數字 (單位：股)
-                    fi_diff = int(item.get('ForeignInvestorDifference', '0').replace(',', ''))
-                    it_diff = int(item.get('InvestmentTrustDifference', '0').replace(',', ''))
+                    fi_diff = float(item.get('ForeignInvestorDifference', '0').replace(',', ''))
+                    it_diff = float(item.get('InvestmentTrustDifference', '0').replace(',', ''))
                     chip_data[f"{code}.TW"] = {
                         "foreign_buy": fi_diff,
                         "trust_buy": it_diff
                     }
     except Exception:
         pass
+        
+    if not chip_data:
+        get_institutional_chips.clear()
+        
     return chip_data
 
 # --- 3. 批量下載歷史數據 (yfinance 引擎，快取 1 小時) ---
