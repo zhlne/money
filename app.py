@@ -59,24 +59,48 @@ with st.expander("📖 系統使用說明與進階參數指南 (初次使用請�
 
 # --- 1. 動態爬取全市場股票代碼 (快取 1 天) ---
 @st.cache_data(ttl=86400, show_spinner=False)
-def get_all_taiwan_stocks_info():
+def get_all_taiwan_stocks_info_twse():
     stock_dict = {}
-    headers = {'User-Agent': 'Mozilla/5.0'}
+    # 加上完整一點的 User-Agent，通常就不需要 verify=False
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
+    
+    # mode 2: 上市 (.TW), mode 4: 上櫃 (.TWO)
     for mode, suffix in [(2, '.TW'), (4, '.TWO')]:
+        url = f"https://isin.twse.com.tw/isin/C_public.jsp?strMode={mode}"
         try:
-            res = requests.get(f"https://isin.twse.com.tw/isin/C_public.jsp?strMode={mode}", headers=headers, verify=False)
-            res.encoding = 'big5'
-            for row in res.text.split('<tr')[1:]:
-                if '<td' not in row: continue
-                cols = row.split('<td')
-                if len(cols) > 5:
-                    code_name = cols[1].split('>')[1].split('<')[0].strip().split('　')
-                    if len(code_name) == 2 and code_name[0].isdigit():
-                        stock_dict[f"{code_name[0]}{suffix}"] = {
-                            "name": code_name[1], "industry": cols[5].split('>')[1].split('<')[0].strip() or "其他"
-                        }
-        except Exception:
-            pass
+            res = requests.get(url, headers=headers, timeout=10)
+            res.raise_for_status()
+            
+            # 讓 pandas 自動解析 HTML 內的表格
+            dfs = pd.read_html(res.text)
+            df = dfs[0]
+            
+            # 將第一列設為欄位名稱，並清除沒有股票代號的空行
+            df.columns = df.iloc[0]
+            df = df.dropna(subset=['有價證券代號及名稱'])
+            
+            for _, row in df.iterrows():
+                val = str(row['有價證券代號及名稱'])
+                # 證交所的格式統一為 "代號　名稱" (中間是全形空白)
+                parts = val.split('　')
+                
+                if len(parts) == 2 and parts[0].strip().isdigit():
+                    code = parts[0].strip()
+                    name = parts[1].strip()
+                    industry = str(row.get('產業別', '其他')).strip()
+                    
+                    if industry in ['nan', '']:
+                        industry = '其他'
+                        
+                    stock_dict[f"{code}{suffix}"] = {
+                        "name": name,
+                        "industry": industry
+                    }
+        except Exception as e:
+            print(f"抓取市場別 {mode} 時發生錯誤: {e}")
+            
     return stock_dict
 
 # --- 2. 獲取當日三大法人籌碼資料 ---
@@ -220,7 +244,7 @@ if st.sidebar.button("🚀 開始全火力掃描", type="primary", use_container
         st.stop()
         
     with st.status("🔍 正在執行高階雷達掃描與回測...", expanded=True) as status:
-        stock_info_dict = get_all_taiwan_stocks_info()
+        stock_info_dict = get_all_taiwan_stocks_info_twse()
         tickers = list(stock_info_dict.keys())[:scan_limit]
         chip_data = get_institutional_chips()
         data = fetch_bulk_market_data(tickers)
