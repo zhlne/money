@@ -155,7 +155,7 @@ def calculate_real_combat_backtest(df, vol_mult, rsi_min, rsi_max, pct_threshold
             stop_loss_price = entry_price * 0.90 
             
             prev_close = float(df['Close'].iloc[i])
-            is_limit_up = (entry_price == float(df['High'].iloc[i + 1])) and (entry_price / prev_close >= 1.095)
+            is_limit_up = (entry_price == float(df['High'].iloc[i + 1])) and (entry_price / prev_close >= 1.090)
             
             if entry_price > 0 and not is_limit_up:
                 exit_price = 0
@@ -319,7 +319,7 @@ if st.sidebar.button("🚀 開始全火力掃描", type="primary", use_container
         
         for h in hits_sorted:
             last_price = float(h['df']['Close'].iloc[-1])
-            est_sl_price = last_price * 0.95 
+            est_sl_price = last_price * 0.90 
             
             f_buy_lots = float(h['chip']['foreign_buy'] / 1000)
             t_buy_lots = float(h['chip']['trust_buy'] / 1000)
@@ -338,7 +338,7 @@ if st.sidebar.button("🚀 開始全火力掃描", type="primary", use_container
                     
                     ### ⚡ 交易指令
                     - 🟢 進場位： 明日開盤價 (若跳空漲停請放棄)
-                    - 🔴 停損位： `實際進場價 × 0.95` (參考預估：`{est_sl_price:.2f}`)
+                    - 🔴 停損位： `實際進場價 × 0.90` (參考預估：`{est_sl_price:.2f}`)
                     
                     ---
                     ### 📊 實戰級回測 (持倉 {holding_days} 天)
